@@ -14,6 +14,9 @@ Optionally mount a custom sshd config at `/etc/ssh/`.
 - `MOTD` change the login message
 - `SFTP_MODE` if "true" sshd will only accept sftp connections
 - `SFTP_CHROOT` if in sftp only mode sftp will be chrooted to this directory. Default "/data"
+- `HELM_HOST` the host name and port where Helm can contact the Tiller server.
+- `TILLER_NAMESPACE` which Kubernetes namespace Helm should look for Tiller in.
+
 
 ## SSH Host Keys
 
@@ -29,6 +32,14 @@ When in sftp only mode (activated by setting `SFTP_MODE=true` the container will
 
 Please note that all components of the pathname in the ChrootDirectory directive must be root-owned directories that are not writable by any other user or group (see man 5 sshd_config).
 
+## Helm setup
+
+The recommended way to access the helm client is to create a separate `helm` user in the container. Its public SSH key should be mounted with the proper privileges on `/etc/authorized_keys/helm`.
+
+Then, in order for the Helm-client to have TLS-authenticated access to Tiller, CA and client certificates and client keys need to be mounted in `/home/helm/certs`. Helm expects these to be named `ca.pem`, `cert.pem` and `key.pem` respectively.
+
+Needless to say, these should all be mounted from Kubernetes secrets.
+
 ## Usage Example
 
 ```
@@ -40,3 +51,7 @@ or
 ```
 docker run -d -p 2222:22 -v $(pwd)/id_rsa.pub:/etc/authorized_keys/www -e SSH_USERS="www:48:48" docker.io/panubo/sshd
 ```
+
+## Capability requirements
+
+For sshd privilege separation to work, the container needs the `SYS_CHROOT` capability. Under Kubernetes, this entails that the capability needs to be added to the deployment or pod definitions for this image, and the service account used to deploy the pod also needs to be associated with a security policy that allows this capability to be added.
